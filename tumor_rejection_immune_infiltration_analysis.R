@@ -9,15 +9,13 @@ library(PICtR)
 library(clustree)
 library(ggrastr)
 library(rstatix)
-library(ggridges)
 options(Seurat.object.assay.version = "v5")
 options(future.globals.maxSize = 2e9)
 
 # directories
-dir <- "/fast/AG_Haas/tumor_rejection_collab/revision_experiment_backup/"
-input.dir <- "/fast/AG_Haas/tumor_rejection_collab/revision_experiment_backup/flowjo_data/PeacoQCed/"
-data.dir <- "/fast/AG_Haas/tumor_rejection_collab/revision_experiment_backup/data/without_3206/"
-plot.dir <- "/fast/AG_Haas/tumor_rejection_collab/revision_experiment_backup/plots/without_3206/"
+input.dir <- "./flowjo_data/"
+data.dir <- "./data/"
+plot.dir <- "./plots/"
 
 # create directory structure if not already present 
 for (d in c(input.dir, data.dir, plot.dir)) {
@@ -91,7 +89,7 @@ obj <- FindClusters(obj, resolution = c(0.3, 0.5, 1, 2))
 obj <- RunUMAP(obj, dims = 1:38, return.model = TRUE, seed.use = 42)
 
 # save 
-saveRDS(obj, file = paste0(data.dir, "obj_no_3206_per_group_sketched_no_UPAR_non_projected.rds"))
+saveRDS(obj, file = paste0(data.dir, "obj_per_group_sketched_non_projected.rds"))
 
 # QUALITY CONTROL -------------------------------------------------------------
 ifelse(!dir.exists(paste0(plot.dir, "01_doublets/")), dir.create(paste0(plot.dir, "01_doublets/")), FALSE)
@@ -99,34 +97,34 @@ ifelse(!dir.exists(paste0(plot.dir, "02_qc/")), dir.create(paste0(plot.dir, "02_
 ifelse(!dir.exists(paste0(plot.dir, "03_annotation/")), dir.create(paste0(plot.dir, "03_annotation/")), FALSE)
 
 # per sample
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_ID_sketched_per_group_noUPAR.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_ID_sketched_per_group.pdf"), height = 7, width = 9, onefile = T)
 DimPlot(obj, group.by = "ID") 
 dev.off() 
 
 # per group
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_group_sketched_per_group_noUPAR.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_group_sketched_per_group.pdf"), height = 7, width = 9, onefile = T)
 DimPlot(obj, group.by = "group") 
 dev.off()
 
 # per acquisition date
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_exp_date_sketched_per_group_noUPAR.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_exp_date_sketched_per_group.pdf"), height = 7, width = 9, onefile = T)
 DimPlot(obj, group.by = "date") 
 dev.off()  # still some batch effects, but less pronounced without sample 3206, check features 
 
 # feature plots
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR.pdf"), height = 7, width = 14, onefile = T)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group.pdf"), height = 7, width = 14, onefile = T)
 FeaturePlot(obj, features = Features(obj)[c(1:12)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj, features = Features(obj)[13:24], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj, features = Features(obj)[c(25:36)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj, features = Features(obj)[c(37:39)], slot = "counts") & scale_color_viridis(option = 'magma')
-dev.off() # predominantly CD73, double-check whether this might be technical 
+dev.off() # predominantly CD73
 
 # check area/height ratio distribution and cutoff
 cutoff <- calculateThreshold(obj$ratio, method = "otsu")
 pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_ratio_histogram.pdf"), height = 6, width = 8, onefile = T)
 hist(obj$ratio, breaks = 2000)
 abline(v=cutoff)
-dev.off() # check independently for CD45+ and CD45- 
+dev.off() # check independently for CD45+ and CD45- cells
 
 # CD45+
 obj@meta.data %>% dplyr::filter(CD45 > 250) %>% ggplot(aes(x = ratio)) + 
@@ -169,7 +167,7 @@ resolution <- c("sketch_snn_res.0.3", "sketch_snn_res.0.5", "sketch_snn_res.1", 
 ifelse(!dir.exists(paste0(plot.dir, "03_annotation/")), dir.create(paste0(plot.dir, "03_annotation/")), FALSE)
 
 # dimplots grouped by cluster at each resolution 
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_clusters_sketched_per_group_noUPAR.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_clusters_sketched_per_group.pdf"), height = 7, width = 9, onefile = T)
 for (res in resolution) {
   print(DimPlot(obj, reduction = 'umap', group.by = res, label = T) + 
           labs(title = paste0(res)))
@@ -185,13 +183,13 @@ dev.off()
 subset <- obj@meta.data %>% dplyr::filter(!is.na(seurat_clusters))
 sketched <- subset(obj, cells = rownames(subset))
 
-pdf(paste0(plot.dir, "01_doublets/", Sys.Date(), "_clustree_all_events_sketched_per_group_noUPAR.pdf"), height = 7, width = 14)
+pdf(paste0(plot.dir, "01_doublets/", Sys.Date(), "_clustree_all_events_sketched_per_group.pdf"), height = 7, width = 14)
 clustree(sketched, prefix = "sketch_snn_res.", exprs = 'data', assay = 'sketch')
 dev.off()
 
 # check resolution = 0.5 
 Idents(obj) <- "sketch_snn_res.0.5"
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_highlighted_clusters_res0.5_sketched_per_group_noUPAR.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_highlighted_clusters_res0.5_sketched_per_group.pdf"), height = 7, width = 9, onefile = T)
 for (i in 0:(length(unique(obj$sketch_snn_res.0.5))-2)) {
   print(DimPlot(obj, cells.highlight = WhichCells(obj, idents = as.character(i))))
 }
@@ -247,103 +245,6 @@ for (f in features) {
 }
 dev.off()
 
-# annotation
-obj@meta.data <- mutate(obj@meta.data, celltype = case_when(
-  sub.cluster == "0"~"Macrophages",
-  sub.cluster == "1"~"cDCs",
-  sub.cluster == "2"~"CD34+ Fibroblasts?",
-  sub.cluster == "3"~"cDCs",
-  sub.cluster == "4"~"B220+CD11c+NK",
-  sub.cluster == "5"~"negative", # tumor cells?
-  sub.cluster == "6"~"Macrophages",
-  sub.cluster == "7"~"CD34+ Fibroblasts?",
-  sub.cluster == "8"~"MSCs?",
-  sub.cluster == "9"~"Ly6C+ Endothelial", 
-  sub.cluster == "10"~"negative", # tumor cells?
-  sub.cluster == "11"~"CD45+",
-  sub.cluster == "12"~"Macrophages",
-  sub.cluster == "13"~"Eosinophils",
-  sub.cluster == "14"~"Neutrophils",
-  sub.cluster == "15"~"PICs",
-  sub.cluster == "16"~"Endothelial/MSCs",
-  sub.cluster == "17_0"~"Monocytes",
-  sub.cluster == "17_1"~"Macrophages",
-  sub.cluster == "17_2"~"Macrophages*Ery?",
-  sub.cluster == "18"~"CD45+",
-  sub.cluster == "19_0"~"cKit+Sca+",
-  sub.cluster == "19_1"~"?",
-  sub.cluster == "19_2"~"?",
-  sub.cluster == "20"~"CD73+ Macrophages?",
-  sub.cluster == "21"~"negative", # small, tumor cells?
-  sub.cluster == "22_0"~"Ly6G+ MSCs?",
-  sub.cluster == "22_1"~"Ly6G+ immune?",
-  sub.cluster == "23"~"Platelets?",
-  sub.cluster == "24"~"PICs",
-  sub.cluster == "25"~"?",
-  sub.cluster == "26"~"CD62P+ Macrophages?",
-  sub.cluster == "27"~"MSCs?",
-  sub.cluster == "28"~"CD73+?",
-  sub.cluster == "29_0"~"?",
-  sub.cluster == "29_1"~"lowQual", # SiglecF in CD45neg 
-  sub.cluster == "29_2"~"cDCs",
-  sub.cluster == "30"~"myeloid",
-  sub.cluster == "31"~"lowQual"
-))
-
-DimPlot(obj, group.by = "celltype", label = TRUE, label.size = 3, reduction = "umap", raster = TRUE, alpha = 0.5, pt.size = 2.2, raster.dpi = c(2048,2048)) 
-
-# color palette
-colors <- c(
-  "Macrophages" = "gold2",
-  "cDCs" = "#CE87DE",  
-  "CD34+ Fibroblasts?" = "green4",
-  "B220+CD11c+NK" = "#672C49",  
-  "negative" = "orchid",  
-  "MSCs?" = "dodgerblue4",
-  "Ly6C+ Endothelial" = "#52A6B1",  
-  "CD45+" = "lightblue", 
-  "Eosinophils" = "yellow2",
-  "Neutrophils" = "pink1",
-  "PICs" = "orange",
-  "Endothelial/MSCs" = "seagreen",  
-  "Monocytes" = "gold4",  
-  "Macrophages*Ery?" = "tomato",  
-  "cKit+Sca+" = "#3F79D9", 
-  "?" = "grey",
-  "CD73+ Macrophages?" = "goldenrod", 
-  "Ly6G+ MSCs?" = "paleturquoise3",
-  "Platelets?" = "#88CCEE",  
-  "CD62P+ Macrophages?" = "khaki",
-  "CD73+?" = "dodgerblue3",
-  "myeloid" = "#B25969", 
-  "lowQual" = "grey"
-)
-
-obj$umap_1 <- obj@reductions$umap@cell.embeddings[,1]
-obj$umap_2 <- obj@reductions$umap@cell.embeddings[,2]
-
-# plot anno 
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_overall_landscape.pdf"), height = 7, width = 12)
-print(ggplot(obj@meta.data %>% dplyr::filter(!celltype %in% c("lowQual")), aes(x = umap_1, y = umap_2, color = celltype)) + 
-        ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
-        ggrastr::geom_point_rast(aes(color = as.factor(celltype)), size = 0.05, raster.dpi = 700) + 
-        theme_classic() + 
-        scale_color_manual(values = colors) + 
-        guides(colour = guide_legend(override.aes = list(size = 5))))
-dev.off()
-
-# plot anno split by group
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_overall_landscape_split_by_group_portrait.pdf"), height = 10, width = 3)
-print(ggplot(obj@meta.data %>% dplyr::filter(!celltype %in% c("lowQual")), aes(x = umap_1, y = umap_2, color = celltype)) + 
-        ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
-        ggrastr::geom_point_rast(aes(color = as.factor(celltype)), size = 0.05, raster.dpi = 700) + 
-        facet_wrap(~group, nrow = 3) + 
-        theme_void() + 
-        theme(legend.position = "none") + 
-        scale_color_manual(values = colors) + 
-        guides(colour = guide_legend(override.aes = list(size = 5))))
-dev.off()
-
 # plot features 
 features <- Features(obj) %>% str_replace("-", "_")
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_features_overall_landscape_rastered.pdf"), width = 12, height = 9)
@@ -359,9 +260,6 @@ for(i in seq_along(features)){
 }
 print(ggarrange(plotlist = plots))
 dev.off()
-
-# save annotated obj
-saveRDS(obj, file = paste0(data.dir, "obj_no_3206_per_group_sketched_no_UPAR_non_projected_annotated.rds"))
 
 # project chosen clustering to all cells
 obj@meta.data <- obj@meta.data %>% 
@@ -381,64 +279,22 @@ obj <- predict_data(obj = obj,
                     assay_ref = "sketch",
                     assay_query = "FACS")
 
-# anno 
-obj@meta.data <- mutate(obj@meta.data, celltype = case_when(
-  pred_snn_res.0.5 == "0"~"Macrophages",
-  pred_snn_res.0.5 == "1"~"cDCs",
-  pred_snn_res.0.5 == "2"~"CD34+ Fibroblasts?",
-  pred_snn_res.0.5 == "3"~"cDCs",
-  pred_snn_res.0.5 == "4"~"B220+CD11c+NK",
-  pred_snn_res.0.5 == "5"~"negative", # tumor cells?
-  pred_snn_res.0.5 == "6"~"Macrophages",
-  pred_snn_res.0.5 == "7"~"CD34+ Fibroblasts?",
-  pred_snn_res.0.5 == "8"~"MSCs?",
-  pred_snn_res.0.5 == "9"~"Ly6C+ Endothelial", 
-  pred_snn_res.0.5 == "10"~"negative", # tumor cells?
-  pred_snn_res.0.5 == "11"~"CD45+",
-  pred_snn_res.0.5 == "12"~"Macrophages",
-  pred_snn_res.0.5 == "13"~"Eosinophils",
-  pred_snn_res.0.5 == "14"~"Neutrophils",
-  pred_snn_res.0.5 == "15"~"PICs",
-  pred_snn_res.0.5 == "16"~"Endothelial/MSCs",
-  pred_snn_res.0.5 == "17"~"Monocytes",
-  pred_snn_res.0.5 == "17.1"~"Macrophages",
-  pred_snn_res.0.5 == "17.2"~"Macrophages*Ery?",
-  pred_snn_res.0.5 == "18"~"CD45+",
-  pred_snn_res.0.5 == "19"~"cKit+Sca+",
-  pred_snn_res.0.5 == "19.1"~"?",
-  pred_snn_res.0.5 == "19.2"~"?",
-  pred_snn_res.0.5 == "20"~"CD73+ Macrophages?",
-  pred_snn_res.0.5 == "21"~"negative", # small, tumor cells?
-  pred_snn_res.0.5 == "22"~"Ly6G+ MSCs?",
-  pred_snn_res.0.5 == "22.1"~"Ly6G+ immune?",
-  pred_snn_res.0.5 == "23"~"Platelets?",
-  pred_snn_res.0.5 == "24"~"PICs",
-  pred_snn_res.0.5 == "25"~"?",
-  pred_snn_res.0.5 == "26"~"CD62P+ Macrophages?",
-  pred_snn_res.0.5 == "27"~"MSCs?",
-  pred_snn_res.0.5 == "28"~"CD73+?",
-  pred_snn_res.0.5 == "29"~"?",
-  pred_snn_res.0.5 == "29.1"~"lowQual", # SiglecF in CD45neg 
-  pred_snn_res.0.5 == "29.2"~"cDCs",
-  pred_snn_res.0.5 == "30"~"myeloid",
-  pred_snn_res.0.5 == "31"~"lowQual"
-))
 
 # save projected obj
-saveRDS(obj, file = paste0(data.dir, "obj_no_3206_per_group_sketched_no_UPAR_projected_annotated.rds"))
+saveRDS(obj, file = paste0(data.dir, "obj_per_group_sketched_projected.rds"))
 
-# new annotation from Inma 
+# annotation 
 obj@meta.data <- mutate(obj@meta.data, celltype = case_when(
   pred_snn_res.0.5 == "0"~"M1 Macrophages",
   pred_snn_res.0.5 == "1"~"cDCs",
-  pred_snn_res.0.5 == "2"~"Fibroblasts", # CD34+
+  pred_snn_res.0.5 == "2"~"Fibroblasts", 
   pred_snn_res.0.5 == "3"~"cDCs",
-  pred_snn_res.0.5 == "4"~"NK cells", # B220+CD11c+
+  pred_snn_res.0.5 == "4"~"NK cells", 
   pred_snn_res.0.5 == "5"~"Tumor cells", 
   pred_snn_res.0.5 == "6"~"M2 Macrophages",
-  pred_snn_res.0.5 == "7"~"Fibroblasts", # CD34+
+  pred_snn_res.0.5 == "7"~"Fibroblasts", 
   pred_snn_res.0.5 == "8"~"Mesenchymal stromal cells?",
-  pred_snn_res.0.5 == "9"~"Endothelial cells", # Ly6C+
+  pred_snn_res.0.5 == "9"~"Endothelial cells", 
   pred_snn_res.0.5 == "10"~"Tumor cells", 
   pred_snn_res.0.5 == "11"~"CD45+", 
   pred_snn_res.0.5 == "12"~"M1 Macrophages",
@@ -453,9 +309,9 @@ obj@meta.data <- mutate(obj@meta.data, celltype = case_when(
   pred_snn_res.0.5 == "19"~"unclear", 
   pred_snn_res.0.5 == "19.1"~"unclear", 
   pred_snn_res.0.5 == "19.2"~"unclear", 
-  pred_snn_res.0.5 == "20"~"regulatory Macrophages", # CD73+
-  pred_snn_res.0.5 == "21"~"Tumor cells", # small 
-  pred_snn_res.0.5 == "22"~"EMT-like tumor cells?", # CD73 described in tumors / EMT, Ly6G unsual but could happen 
+  pred_snn_res.0.5 == "20"~"regulatory Macrophages", 
+  pred_snn_res.0.5 == "21"~"Tumor cells", 
+  pred_snn_res.0.5 == "22"~"EMT-like tumor cells?", 
   pred_snn_res.0.5 == "22.1"~"unclear",
   pred_snn_res.0.5 == "23"~"Platelets",
   pred_snn_res.0.5 == "24"~"PICs",
@@ -477,6 +333,9 @@ obj@meta.data <- mutate(obj@meta.data, celltype = case_when(
 ### regulatory: CD73+, CD11b+, CD64+ 
 ### relapse-specific: CD62P+, F4/80+, CD11b+, CD206+ 
 
+# save annotated obj
+saveRDS(obj, file = paste0(data.dir, "obj_per_group_sketched_projected_annotated.rds"))
+
 # CLEANED DATASET -------------------------------------------------------------
 # remove unclear populations and doublets, re-run analysis 
 subset <- obj@meta.data %>% dplyr::filter(!celltype %in% c("unclear", "lowqual", "PICs"))
@@ -492,7 +351,7 @@ obj_clean <- obj_clean %>%
   RunUMAP(dims = 1:38, return.model = TRUE, reduction = "pca", reduction.name = "umap", seed.use = 42)
 
 # save 
-saveRDS(obj_clean, file = paste0(data.dir, "obj_no_3206_per_group_sketched_no_UPAR_clean.rds"))
+saveRDS(obj_clean, file = paste0(data.dir, "obj_per_group_sketched_clean.rds"))
 
 obj_clean$umap_1 <- obj_clean@reductions$umap@cell.embeddings[,1]
 obj_clean$umap_2 <- obj_clean@reductions$umap@cell.embeddings[,2]
@@ -502,7 +361,7 @@ DimPlot(obj_clean, group.by = "sketch_snn_res.0.5", label = T)
 DimPlot(obj_clean, group.by = "sketch_snn_res.1", label = T)
 
 # features 
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_clean.pdf"), height = 7, width = 14, onefile = T)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_clean.pdf"), height = 7, width = 14, onefile = T)
 FeaturePlot(obj_clean, features = Features(obj_clean)[c(1:12)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj_clean, features = Features(obj_clean)[13:24], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj_clean, features = Features(obj_clean)[c(25:36)], slot = "counts") & scale_color_viridis(option = 'magma')
@@ -511,7 +370,7 @@ dev.off()
 
 # features split by group
 sketched <- obj_clean@meta.data %>% dplyr::filter(!is.na(sketch_snn_res.0.3))
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_clean_by_group.pdf"), height = 7, width = 14, onefile = T)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_clean_by_group.pdf"), height = 7, width = 14, onefile = T)
 features <- Features(obj_clean) %>% str_replace("-", "_")
 for(i in seq_along(features)){
   print(ggplot(sketched, aes(x = umap_1, y = umap_2, color = .data[[features[i]]])) + 
@@ -526,7 +385,7 @@ dev.off()
 
 # check resolution = 0.5
 Idents(obj_clean) <- "sketch_snn_res.0.5"
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_highlighted_clusters_res0.5_sketched_per_group_noUPAR_clean.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_highlighted_clusters_res0.5_sketched_per_group_clean.pdf"), height = 7, width = 9, onefile = T)
 for (i in 0:(length(unique(obj_clean$sketch_snn_res.0.5))-2)) {
   print(DimPlot(obj_clean, cells.highlight = WhichCells(obj_clean, idents = as.character(i))))
 }
@@ -563,7 +422,7 @@ obj_clean <- predict_data(obj = obj_clean,
                     assay_ref = "sketch",
                     assay_query = "FACS")
 
-# clean annotation based on Inma's with adjustments ----
+# clean annotation ----
 obj_clean@meta.data <- mutate(obj_clean@meta.data, celltype = case_when(
   pred_snn_res.0.5 == "0"~"Macrophages",
   pred_snn_res.0.5 == "0.1"~"Monocytes",
@@ -574,7 +433,7 @@ obj_clean@meta.data <- mutate(obj_clean@meta.data, celltype = case_when(
   pred_snn_res.0.5 == "5"~"Tumor cells", 
   pred_snn_res.0.5 == "6"~"Macrophages",
   pred_snn_res.0.5 == "7"~"Fibroblasts", 
-  pred_snn_res.0.5 == "8"~"CD73+ cells", # Mesenchymal stromal cells, but only hinges on CD73 signal
+  pred_snn_res.0.5 == "8"~"CD73+ cells", # Mesenchymal stromal cells? but only hinges on CD73 signal
   pred_snn_res.0.5 == "9"~"Endothelial cells", 
   pred_snn_res.0.5 == "10"~"Tumor cells", 
   pred_snn_res.0.5 == "11"~"CD45+", 
@@ -586,7 +445,7 @@ obj_clean@meta.data <- mutate(obj_clean@meta.data, celltype = case_when(
   pred_snn_res.0.5 == "17"~"Platelets",
   pred_snn_res.0.5 == "18"~"Tumor cells", 
   pred_snn_res.0.5 == "19"~"Monocytes", 
-  pred_snn_res.0.5 == "20"~"CD73+ cells", # Mesenchymal stromal cells, but only hinges on CD73 signal
+  pred_snn_res.0.5 == "20"~"CD73+ cells", # Mesenchymal stromal cells? but only hinges on CD73 signal
   pred_snn_res.0.5 == "21"~"Ly6G+CD73+ cells", # EMT-like tumor cells? cannot be sure, but upregulation of CD73 (and Ly6G)
   pred_snn_res.0.5 == "22"~"remove", # very low CD45, low quality
   pred_snn_res.0.5 == "23"~"remove", # maybe Platelet/Erythrocyte aggregates 
@@ -608,7 +467,7 @@ obj_final$umap_1 <- obj_final@reductions$umap@cell.embeddings[,1]
 obj_final$umap_2 <- obj_final@reductions$umap@cell.embeddings[,2]
 
 # save 
-saveRDS(obj_final, file = paste0(data.dir, "obj_no_3206_per_group_sketched_no_UPAR_final.rds"))
+saveRDS(obj_final, file = paste0(data.dir, "obj__per_group_sketched_final.rds"))
 
 # color palette
 colors <- c(
@@ -629,14 +488,14 @@ colors <- c(
 )
 
 # features
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_final.pdf"), height = 7, width = 14, onefile = T)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_final.pdf"), height = 7, width = 14, onefile = T)
 FeaturePlot(obj_final, features = Features(obj_final)[c(1:12)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj_final, features = Features(obj_final)[13:24], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj_final, features = Features(obj_final)[c(25:36)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(obj_final, features = Features(obj_final)[c(37:39)], slot = "counts") & scale_color_viridis(option = 'magma')
 dev.off() 
 
-# supplement features figure layout
+# supplement features figure layout  (Ext Figure 4B)
 feat <- c("Ly6G", "Sca1", "CD45", "FAP", "CD105", "CD48", "CD41", "CD43", "CD86", 
           "CD16-32", "MHCII", "CD127", "CD62P", "CD71", "NK1", "CD64", "CD23", 
           "CD117", "CD80", "CD150", "CD73", "CD11c", "PDGFR", "CD135", "B220", 
@@ -649,11 +508,11 @@ for(i in 1:length(Feature_Plot)) suppressMessages({
     NoLegend() + 
     NoAxes()
 })
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_final_rastered.pdf"), height = 8, width = 6)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_final_rastered.pdf"), height = 8, width = 6)
 print(cowplot::plot_grid(plotlist = Feature_Plot, nrow = 6))
 dev.off()
 
-# plot anno 
+# plot annotation (Figure 4D)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_clean_overall_landscape_final.pdf"), height = 7, width = 10)
 print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -663,19 +522,7 @@ print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype))
         guides(colour = guide_legend(override.aes = list(size = 5))))
 dev.off()
 
-# plot anno split by group
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_clean_overall_landscape_split_by_group_portrait_final.pdf"), height = 10, width = 3)
-print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
-        ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
-        ggrastr::geom_point_rast(aes(color = as.factor(celltype)), size = 0.05, raster.dpi = 700) + 
-        facet_wrap(~group, nrow = 3) + 
-        theme_void() + 
-        theme(legend.position = "none") + 
-        scale_color_manual(values = colors) + 
-        guides(colour = guide_legend(override.aes = list(size = 5))))
-dev.off()
-
-# landscape 
+# plot annotation split by group (Ext Figure 4C)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_clean_overall_landscape_split_by_group_landscape_final.pdf"), height = 3, width = 10)
 print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -699,7 +546,7 @@ immun <- immun %>%
   RunUMAP(dims = 1:38, return.model = TRUE, reduction = "pca", reduction.name = "umap", seed.use = 42)
 
 # save 
-saveRDS(immun, file = paste0(data.dir, "obj_no_3206_per_group_sketched_no_UPAR_immune_only.rds"))
+saveRDS(immun, file = paste0(data.dir, "obj__per_group_sketched_immune_only.rds"))
 
 immun$umap_1 <- immun@reductions$umap@cell.embeddings[,1]
 immun$umap_2 <- immun@reductions$umap@cell.embeddings[,2]
@@ -710,14 +557,14 @@ DimPlot(immun, group.by = "sketch_snn_res.0.5", label = T)
 
 # check resolution = 0.5
 Idents(immun) <- "sketch_snn_res.0.5"
-pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_highlighted_clusters_res0.5_sketched_per_group_noUPAR_immun.pdf"), height = 7, width = 9, onefile = T)
+pdf(paste0(plot.dir, "02_qc/", Sys.Date(), "_dimplot_highlighted_clusters_res0.5_sketched_per_group_immun.pdf"), height = 7, width = 9, onefile = T)
 for (i in 0:(length(unique(immun$sketch_snn_res.0.5))-2)) {
   print(DimPlot(immun, cells.highlight = WhichCells(immun, idents = as.character(i))))
 }
 dev.off()
 
 # features
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_immun.pdf"), height = 7, width = 14, onefile = T)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_immun.pdf"), height = 7, width = 14, onefile = T)
 FeaturePlot(immun, features = Features(immun)[c(1:12)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(immun, features = Features(immun)[13:24], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(immun, features = Features(immun)[c(25:36)], slot = "counts") & scale_color_viridis(option = 'magma')
@@ -814,18 +661,15 @@ colors_immun <- c(
   "NK cells" = "#672C49", 
   "non-class. Monocytes" = "gold4") 
 
-
-DimPlot(immun_final, group.by = "celltype", label = T, cols = colors_immun)
-
 # features
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_immun_final.pdf"), height = 7, width = 14, onefile = T)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_immun_final.pdf"), height = 7, width = 14, onefile = T)
 FeaturePlot(immun_final, features = Features(immun_final)[c(1:12)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(immun_final, features = Features(immun_final)[13:24], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(immun_final, features = Features(immun_final)[c(25:36)], slot = "counts") & scale_color_viridis(option = 'magma')
 FeaturePlot(immun_final, features = Features(immun_final)[c(37:39)], slot = "counts") & scale_color_viridis(option = 'magma')
 dev.off() 
 
-# supplement features figure layout
+# supplement features figure layout (Ext Figure 4E)
 Feature_Plot <- FeaturePlot(immun_final, features=feat, alpha=1, combine=F, raster=T, reduction="umap", pt.size=1.5, slot = "counts")
 for(i in 1:length(Feature_Plot)) suppressMessages({
   Feature_Plot[[i]] <- Feature_Plot[[i]] + 
@@ -834,11 +678,11 @@ for(i in 1:length(Feature_Plot)) suppressMessages({
     NoLegend() + 
     NoAxes()
 })
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_noUPAR_immun_final_rastered.pdf"), height = 8, width = 6)
+pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_group_immun_final_rastered.pdf"), height = 8, width = 6)
 print(cowplot::plot_grid(plotlist = Feature_Plot, nrow = 6))
 dev.off()
 
-# plot
+# plot (Figure 4E)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_immun_landscape_final.pdf"), height = 7, width = 9)
 print(ggplot(immun_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -848,7 +692,7 @@ print(ggplot(immun_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype
         guides(colour = guide_legend(override.aes = list(size = 5))))
 dev.off()
 
-# split by group 
+# split by group (Ext Figure 4F)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_immun_landscape_final_by_group.pdf"), height = 3, width = 10)
 print(ggplot(immun_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -891,16 +735,13 @@ res <- obj_final@meta.data %>%
 res <- left_join(res, live, by = "sample") %>% 
   mutate(ID = str_extract(sample, "samples_.._(.*)_202", group = 1)) %>% 
   mutate(group = case_when(
-    ID %in% c("3203", "3745", "3746", "3747", "3948") ~ 1, # 3747 instead of 3947?
+    ID %in% c("3203", "3745", "3746", "3747", "3948") ~ 1, 
     ID %in% c("3153", "3204", "3318", "3321", "3455") ~ 2, 
     ID %in% c("3152", "3205", "3206", "32x9", "3320") ~ 3)) 
 
 # calculate frequency
 res <- res %>% 
   mutate(freq = n / live)
-
-# save 
-write.csv(res, paste0(data.dir, Sys.Date(), "_celltype_frequencies_annotation_VF+IR_final.csv"))
 
 # plot 
 plots = vector('list', length(unique(res$celltype)))
@@ -924,7 +765,7 @@ stats <- res %>%
 
 # tumor vasculature ----
 # CAVE: on day 1 (group 1&2) all cells were acquired, acquisition at day 2 was capped 
-# all statements are relative 
+# -> all statements are relative 
 
 # stats celltype frequency 
 stats_vasc <- res %>% 
@@ -934,7 +775,7 @@ stats_vasc <- res %>%
   adjust_pvalue(method = "holm") %>%
   add_xy_position()
 
-# plot
+# plot (Ext Figure 4D)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_quantification_endothelial_cells.pdf"), height = 6, width = 8)
 print(ggstripchart(res %>% dplyr::filter(celltype %in% c("Endothelial cells")), 
              x = "group", y = "freq", fill = "celltype", jitter = 0.2, 
@@ -981,10 +822,7 @@ res <- res %>%
                                               "Undifferentiated Macrophages", "activated cDCs", "cDCs", "class. Monocytes", 
                                               "non-class. Monocytes", "Eosinophils", "Neutrophils", "NK cells", "CD45+")))
 
-# save 
-write.csv(res, paste0(data.dir, Sys.Date(), "_celltype_frequencies_immune_compartment_VF.csv"))
-
-# plot stripchart ----
+# plot stripchart (Figure 4F) ----
 plots = vector('list', length(unique(res$celltype)))
 scaleFunc <- function(x) sprintf("%.3f", x)
 celltypes <- c("M1-like Macrophages", "M2-like Macrophages", "Regulatory Macrophages", 
@@ -1000,7 +838,6 @@ for(i in seq_along(celltypes)){
     scale_y_continuous(n.breaks = 4, labels = scaleFunc) + 
     theme(legend.position = "none", axis.text.y = element_text()) + 
     scale_fill_manual(values = colors_immun) 
-    # geom_text(aes(label = ID), size = 3)
 }
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_quantification_immune_cells.pdf"), height = 8, width = 7)
 print(ggarrange(plotlist = plots, ncol = 3, nrow = 4))
@@ -1011,48 +848,4 @@ stats <- res %>%
   ungroup() %>% 
   group_by(celltype) %>%
   t_test(freq ~ group) %>% 
-  adjust_pvalue(method = "BH") # less conservative correction for discovery 
-
-# plot lineplot ----
-# transparant lines 
-library(colorspace)
-colors_t <- adjust_transparency(colors_immun, alpha = 0.3)
-names(colors_t) <- names(colors_immun)
-
-# not smoothed, +/- SD
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_quantification_immune_cells_lineplot_noerrorbars.pdf"), height = 11, width = 8.5)
-p <- ggplot(res %>% 
-              dplyr::group_by(celltype, group) %>% 
-              summarise(mean = mean(freq), SD = sd(freq)),
-            aes(x=group, y = mean, fill = celltype, ymin = mean - SD, ymax = mean + SD)) + 
-  geom_ribbon() + geom_line(aes(color = celltype)) + 
-  theme_classic() + 
-  facet_wrap(~celltype, nrow = length(unique(immun_final$celltype)), scales = "free") + 
-  theme(strip.background = element_blank(), strip.text.x = element_blank()) + 
-  scale_fill_manual(values = colors_t) + scale_color_manual(values = colors_immun) +
-  scale_x_continuous(breaks = c(1,2,3))
-print(p)
-dev.off()
-
-
-# alluvial ---
-library(ggalluvial)
-
-# calculate mean frequency within each group ----
-allu <- res %>% 
-  group_by(celltype, group) %>% summarise(mean = mean(freq)) %>% ungroup() %>%
-  group_by(group) %>% mutate(sum_all=sum(mean)) %>% mutate(freq_within=mean/sum_all) %>% 
-  # format 
-  mutate(group = factor(group, levels = c("1", "2", "3"))) %>% 
-  select(celltype, group, freq_within) %>% tibble::rownames_to_column()
-
-# plot 
-pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_quantification_immune_cells_alluvial.pdf"), height = 8, width = 6)
-ggplot(allu, aes(x = group, stratum = celltype, alluvium = celltype, 
-                 y = freq_within, fill = celltype, label=celltype)) +
-  geom_lode() + geom_flow(curve_type = "cubic") +
-  geom_stratum(alpha = 1) +
-  scale_fill_manual(values = colors_immun) +
-  theme_classic()
-dev.off()
-
+  adjust_pvalue(method = "BH")
