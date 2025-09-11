@@ -503,7 +503,7 @@ FeaturePlot(obj_final, features = Features(obj_final)[c(25:36)], slot = "counts"
 FeaturePlot(obj_final, features = Features(obj_final)[c(37:39)], slot = "counts") & scale_color_viridis(option = 'magma')
 dev.off() 
 
-# supplement features figure layout  (Ext Figure 4B)
+# supplement features figure layout  (Ext Figure 5B)
 feat <- c("Ly6G", "Sca1", "CD45", "FAP", "CD105", "CD48", "CD41", "CD43", "CD86", 
           "CD16-32", "MHCII", "CD127", "CD62P", "CD71", "NK1", "CD64", "CD23", 
           "CD117", "CD80", "CD150", "CD73", "CD11c", "PDGFR", "CD135", "B220", 
@@ -520,7 +520,7 @@ pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_
 print(cowplot::plot_grid(plotlist = Feature_Plot, nrow = 6))
 dev.off()
 
-# plot annotation (Figure 4D)
+# plot annotation (Figure 5D)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_clean_overall_landscape_final.pdf"), height = 7, width = 10)
 print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -530,7 +530,7 @@ print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype))
         guides(colour = guide_legend(override.aes = list(size = 5))))
 dev.off()
 
-# plot annotation split by group (Ext Figure 4C)
+# plot annotation split by group (Ext Figure 5C)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_clean_overall_landscape_split_by_group_landscape_final.pdf"), height = 3, width = 10)
 print(ggplot(obj_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -677,7 +677,7 @@ FeaturePlot(immun_final, features = Features(immun_final)[c(25:36)], slot = "cou
 FeaturePlot(immun_final, features = Features(immun_final)[c(37:39)], slot = "counts") & scale_color_viridis(option = 'magma')
 dev.off() 
 
-# supplement features figure layout (Ext Figure 4E)
+# supplement features figure layout (Ext Figure 5E)
 Feature_Plot <- FeaturePlot(immun_final, features=feat, alpha=1, combine=F, raster=T, reduction="umap", pt.size=1.5, slot = "counts")
 for(i in 1:length(Feature_Plot)) suppressMessages({
   Feature_Plot[[i]] <- Feature_Plot[[i]] + 
@@ -690,7 +690,7 @@ pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_feature_plots_sketched_per_
 print(cowplot::plot_grid(plotlist = Feature_Plot, nrow = 6))
 dev.off()
 
-# plot (Figure 4E)
+# plot (Figure 5E)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_immun_landscape_final.pdf"), height = 7, width = 9)
 print(ggplot(immun_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -700,7 +700,7 @@ print(ggplot(immun_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype
         guides(colour = guide_legend(override.aes = list(size = 5))))
 dev.off()
 
-# split by group (Ext Figure 4F)
+# split by group (Ext Figure 5F)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_dimplot_annotated_immun_landscape_final_by_group.pdf"), height = 3, width = 10)
 print(ggplot(immun_final@meta.data, aes(x = umap_1, y = umap_2, color = celltype)) + 
         ggrastr::geom_point_rast(size = 0.2, color = "black", raster.dpi = 700) + 
@@ -783,7 +783,7 @@ stats_vasc <- res %>%
   adjust_pvalue(method = "holm") %>%
   add_xy_position()
 
-# plot (Ext Figure 4D)
+# plot (Ext Figure 5D)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_quantification_endothelial_cells.pdf"), height = 6, width = 8)
 print(ggstripchart(res %>% dplyr::filter(celltype %in% c("Endothelial cells")), 
              x = "group", y = "freq", fill = "celltype", jitter = 0.2, 
@@ -830,7 +830,7 @@ res <- res %>%
                                               "Undifferentiated Macrophages", "activated cDCs", "cDCs", "class. Monocytes", 
                                               "non-class. Monocytes", "Eosinophils", "Neutrophils", "NK cells", "CD45+")))
 
-# plot stripchart (Figure 4F) ----
+# plot stripchart (Figure 5F) ----
 plots = vector('list', length(unique(res$celltype)))
 scaleFunc <- function(x) sprintf("%.3f", x)
 celltypes <- c("M1-like Macrophages", "M2-like Macrophages", "Regulatory Macrophages", 
