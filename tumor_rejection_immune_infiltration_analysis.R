@@ -17,6 +17,7 @@ library(PICtR)
 library(clustree)
 library(ggrastr)
 library(rstatix)
+library(writexl)
 options(Seurat.object.assay.version = "v5")
 options(future.globals.maxSize = 2e9)
 
@@ -84,7 +85,6 @@ DefaultAssay(split) <- "sketch"
 
 # join layers 
 split <- JoinLayers(split)
-
 obj <- split
 rm(split)
 
@@ -165,7 +165,7 @@ p3 <- ggplot(obj@meta.data, aes(x = FSC.A, y = FSC.H, color = RenyiEntropy)) + g
 p4 <- ggplot(obj@meta.data, aes(x = FSC.A, y = FSC.H, color = Moments)) + geom_point() + labs(title = "Moments")
 ggarrange(p1, p2, p3, p4) 
 
-# move forward with triangle
+# move forward with triangle method
 obj$ratio_anno <- obj$triangle
 ratio_cluster_plot(obj, "sketch_snn_res.0.5", assay = "sketch") 
 
@@ -454,13 +454,13 @@ obj_clean@meta.data <- mutate(obj_clean@meta.data, celltype = case_when(
   pred_snn_res.0.5 == "18"~"Tumor cells", 
   pred_snn_res.0.5 == "19"~"Monocytes", 
   pred_snn_res.0.5 == "20"~"CD73+ cells", # Mesenchymal stromal cells? but only hinges on CD73 signal
-  pred_snn_res.0.5 == "21"~"Ly6G+CD73+ cells", # EMT-like tumor cells? cannot be sure, but upregulation of CD73 (and Ly6G)
+  pred_snn_res.0.5 == "21"~"Ly6G+CD73+ cells", # EMT-like tumor cells? upregulation of CD73 (and Ly6G)
   pred_snn_res.0.5 == "22"~"remove", # very low CD45, low quality
   pred_snn_res.0.5 == "23"~"remove", # maybe Platelet/Erythrocyte aggregates 
-  pred_snn_res.0.5 == "24"~"remove", # Erythrocytes?
+  pred_snn_res.0.5 == "24"~"remove", # likely Erythrocytes
 ))
 
-# remove populations that cannot be annotated, re-calculate UMAP 
+# remove populations that cannot be annotated confidently, re-calculate UMAP 
 subset <- obj_clean@meta.data %>% dplyr::filter(!celltype %in% c("remove"))
 obj_final <- subset(obj_clean, cells = rownames(subset))
 
@@ -785,16 +785,26 @@ stats_vasc <- res %>%
 
 # plot (Ext Figure 5D)
 pdf(paste0(plot.dir, "03_annotation/", Sys.Date(), "_quantification_endothelial_cells.pdf"), height = 6, width = 8)
-print(ggstripchart(res %>% dplyr::filter(celltype %in% c("Endothelial cells")), 
-             x = "group", y = "freq", fill = "celltype", jitter = 0.2, 
-             size = 6, add = "mean_sd", add.params = list(color = "black"), 
-             shape = 21, error.plot = "errorbar", facet.by = "celltype") + 
+p <- ggstripchart(res %>% dplyr::filter(celltype %in% c("Endothelial cells")), 
+                  x = "group", y = "freq", fill = "celltype", jitter = 0.2, 
+                  size = 6, add = "mean_sd", add.params = list(color = "black"), 
+                  shape = 21, error.plot = "errorbar", facet.by = "celltype") + 
   stat_summary(fun = mean, fun.min = mean, fun.max = mean, geom = "errorbar", color = "black", width = 0.3, size = 0.5) + 
   theme_classic() +
   theme(legend.position = "none") + 
   stat_pvalue_manual(stats_vasc) + 
-  scale_fill_manual(values = c("darkred")))
+  scale_fill_manual(values = c("darkred"))
+print(p)
 dev.off()
+
+# export source data 
+write_xlsx(p$data %>% 
+             mutate(group = case_when(group == "1" ~ "Progressive Tumors", 
+                                      group == "2" ~ "Remission",
+                                      group == "3" ~ "Relapse")) %>% 
+             rename(frequency = freq, total_live_cells = live, mouse_ID = ID, count = n),
+           paste0(plot.dir, "Extended_Data_Figure_FD_sourcedata.xlsx"))
+
 
 # QUANTIFICATION OF THE IMMUNE COMPARTMENT ONLY -------------------------------
 # cell type frequencies ----
@@ -857,3 +867,15 @@ stats <- res %>%
   group_by(celltype) %>%
   t_test(freq ~ group) %>% 
   adjust_pvalue(method = "BH")
+
+# export source data (for Figure 5F)
+source_data_5F <- lapply(plots, function(celltype){
+  data <- celltype$data
+  return(data)
+})
+source_data_5F <- bind_rows(source_data_5F) %>% 
+  mutate(group = case_when(group == "1" ~ "Prog", 
+                           group == "2" ~ "Rem",
+                           group == "3" ~ "Rel")) %>% 
+  rename(frequency = freq, total_live_cells = live, mouse_ID = ID, count = n) %>% 
+write_xlsx(paste0(plot.dir, "Figure_5F_sourcedata.xlsx"))
